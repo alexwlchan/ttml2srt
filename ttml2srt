@@ -38,11 +38,18 @@ def parse_time_expression(expression, default_offset=timedelta(0)):
     if clock_time_frames:
         raise NotImplementedError('Parsing time expressions by frame is not supported!')
 
+    try:
+        return timedelta(seconds=float(expression))   # As found in auto-generated YouTube TTML
+    except ValueError:
+        pass
+
     raise ValueError('unknown time expression: %s' % expression)
 
 def parse_times(elem, default_begin=timedelta(0)):
     if 'begin' in elem.attrib:
         begin = parse_time_expression(elem.attrib['begin'], default_offset=default_begin)
+    elif 'start' in elem.attrib:
+        begin = parse_time_expression(elem.attrib['start'], default_offset=default_begin)
     else:
         begin = default_begin
     elem.attrib['{abs}begin'] = begin
@@ -185,6 +192,8 @@ def convert_ttml_to_srt(ttml_subtitles):
         styles[elem.attrib['id']] = style
 
     body = root.find('./body')
+    if not body and root.tag == 'transcript':
+        body = root  # Tolerate YouTube auto-generated TTML
 
     parse_times(body)
 
